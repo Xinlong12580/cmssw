@@ -52,7 +52,10 @@ private:
   // std::vector<SiPixelTemplateStore> thePixelTemp_;
   //--- DB Error Parametrization object, new light templates
   std::vector<SiPixelGenErrorStore> thePixelGenError_;
-
+    bool isWideRow(int absRow) const;
+    bool isWideCol(int absCol) const;
+    bool isWidePixel(int absRow, int absCol) const;
+    int PixelPreprocess( const SiPixelCluster& cluster, const PixelTopology& topol, float (&Cluster_raw)[TXSIZE][TYSIZE], float (&Cluster_xRaw)[TXSIZE], float (&Cluster_yRaw)[TYSIZE], float (&Cluster)[TXSIZE][TYSIZE], float (&Cluster_x)[TXSIZE], float (&Cluster_y)[TYSIZE], float& Cluster_charge, int& Cluster_size, int& Cluster_sizeX, int& Cluster_sizeY, float& ClusterCenter_x, float& ClusterCenter_y, int& Row_offset, int& Col_offset) const;
   // int speed_;
 
   // bool UseClusterSplitter_;
