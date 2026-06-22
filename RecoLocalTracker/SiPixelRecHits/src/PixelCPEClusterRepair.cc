@@ -167,6 +167,7 @@ std::unique_ptr<PixelCPEBase::ClusterParam> PixelCPEClusterRepair::createCluster
 //  The main call to the template code.
 //------------------------------------------------------------------
 LocalPoint PixelCPEClusterRepair::localPosition(DetParam const& theDetParam, ClusterParam& theClusterParamBase) const {
+  auto verystart = std::chrono::high_resolution_clock::now();
   ClusterParamTemplate& theClusterParam = static_cast<ClusterParamTemplate&>(theClusterParamBase);
   bool filled_from_2d = false;
 
@@ -270,6 +271,12 @@ LocalPoint PixelCPEClusterRepair::localPosition(DetParam const& theDetParam, Clu
   theClusterParam.ierr = 0;
   theClusterParam.ierr2 = 0;
 
+ std::vector<int> durations = {};
+        std::vector<std::string> checkpoints = {};
+        auto checkpoint = std::chrono::high_resolution_clock::now();
+        durations.push_back((std::chrono::duration_cast<std::chrono::nanoseconds>(checkpoint - verystart)).count());
+        checkpoints.push_back("before_main");
+
   //--- Should we run the 2D reco?
   checkRecommend2D(theDetParam, theClusterParam, clusterPayload, ID1);
   if (theClusterParam.recommended2D_) {
@@ -281,6 +288,9 @@ LocalPoint PixelCPEClusterRepair::localPosition(DetParam const& theDetParam, Clu
     callTempReco1D(theDetParam, theClusterParam, clusterPayload, ID1, lp);
     filled_from_2d = false;
   }
+        checkpoint = std::chrono::high_resolution_clock::now();
+        durations.push_back((std::chrono::duration_cast<std::chrono::nanoseconds>(checkpoint - verystart)).count());
+        checkpoints.push_back("after_main");
 
   //--- Make sure cluster repair returns all info about the hit back up to caller
   //--- Necessary because it copied the base class so it does not modify it
@@ -298,7 +308,12 @@ LocalPoint PixelCPEClusterRepair::localPosition(DetParam const& theDetParam, Clu
     theClusterParamBase.probabilityX_ = theClusterParam.probabilityX_;
     theClusterParamBase.probabilityY_ = theClusterParam.probabilityY_;
   }
-
+        checkpoint = std::chrono::high_resolution_clock::now();
+        durations.push_back((std::chrono::duration_cast<std::chrono::nanoseconds>(checkpoint - verystart)).count());
+        checkpoints.push_back("full function");
+  for (int i = 0; i < int(checkpoints.size()); i++){
+        std::cout<<"Template Execution time at check point: " <<checkpoints.at(i)<<" : "<< durations.at(i)<<" nanoseconds"<<std::endl;
+    }
   return LocalPoint(theClusterParam.templXrec_, theClusterParam.templYrec_);
 }
 
@@ -362,7 +377,7 @@ void PixelCPEClusterRepair::callTempReco1D(DetParam const& theDetParam,
   
   auto end = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-  std::cout << "Execution time: " << duration.count() << " microseconds" << std::endl;
+  //std::cout << "Template Execution time: " << duration.count() << " microseconds" << std::endl;
   // ******************************************************************
 
   //--- Check exit status

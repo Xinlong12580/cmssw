@@ -17,6 +17,7 @@
 #include "boost/multi_array.hpp"
 
 #include <iostream>
+#include <chrono>
 using namespace std;
 
 namespace {
@@ -104,6 +105,8 @@ PixelCPEGeneric::PixelCPEGeneric(edm::ParameterSet const& conf,
 //! into the local frame (in centimeters).
 //-----------------------------------------------------------------------------
 LocalPoint PixelCPEGeneric::localPosition(DetParam const& theDetParam, ClusterParam& theClusterParamBase) const {
+    
+    auto verystart = std::chrono::high_resolution_clock::now();
   ClusterParamGeneric& theClusterParam = static_cast<ClusterParamGeneric&>(theClusterParamBase);
 
   //cout<<" in PixelCPEGeneric:localPosition - "<<endl; //dk
@@ -339,6 +342,14 @@ LocalPoint PixelCPEGeneric::localPosition(DetParam const& theDetParam, ClusterPa
   //--- Now put the two together
   //std::cout << xPos << " " << yPos << std::endl;
   LocalPoint pos_in_local(xPos, yPos);
+ std::vector<int> durations = {};
+        std::vector<std::string> checkpoints = {};
+        auto checkpoint = std::chrono::high_resolution_clock::now();
+        durations.push_back((std::chrono::duration_cast<std::chrono::nanoseconds>(checkpoint - verystart)).count());
+        checkpoints.push_back("full function");
+      for (int i = 0; i < int(checkpoints.size()); i++){
+        std::cout<<"Generic Execution time at check point: " <<checkpoints.at(i)<<" : "<< durations.at(i)<<" nanoseconds"<<std::endl;
+    }
   return pos_in_local;
 }
 

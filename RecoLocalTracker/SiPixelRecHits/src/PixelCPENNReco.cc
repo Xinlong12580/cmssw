@@ -45,6 +45,14 @@ namespace {
 	constexpr float CHARGENORM = 25000.;
 }  // namespace
 
+#ifndef REGISTER_TIME 
+#define REGISTER_TIME
+        const void register_time(std::chrono::high_resolution_clock::time_point verystart, std::string cp_name, std::vector<int>& durations,std::vector<std::string>& checkpoints ){
+             auto checkpoint = std::chrono::high_resolution_clock::now();
+            durations.push_back((std::chrono::duration_cast<std::chrono::nanoseconds>(checkpoint - verystart)).count());
+	        checkpoints.push_back(cp_name);
+        }
+#endif
 //-----------------------------------------------------------------------------
 //  Constructor.
 //
@@ -335,7 +343,9 @@ int PixelCPENNReco::PixelPreprocess( const SiPixelCluster& cluster, const PixelT
 }
 
 LocalPoint PixelCPENNReco::localPosition(DetParam const& theDetParam, ClusterParam& theClusterParamBase) const {
-	
+        std::vector<int> durations = {};
+        std::vector<std::string> checkpoints = {};
+    auto verystart = std::chrono::high_resolution_clock::now();
        
 	//ClusterParamTemplate& theClusterParam = static_cast<ClusterParamTemplate&>(theClusterParamBase);
 	ClusterParamGeneric& theClusterParam = static_cast<ClusterParamGeneric&>(theClusterParamBase);
@@ -373,7 +383,9 @@ LocalPoint PixelCPENNReco::localPosition(DetParam const& theDetParam, ClusterPar
   	  */
   //outer ladders = unflipped = odd nos
   	  
-	  const tensorflow::Session* session_x; 
+        register_time(verystart, "1", durations, checkpoints) ;
+
+    const tensorflow::Session* session_x; 
           const tensorflow::Session* session_y;
 	  if (layer == 1 and ladder%2 != 0) {
 		session_x = session_x_vec.at(0); session_y = session_y_vec.at(0);
@@ -455,6 +467,7 @@ LocalPoint PixelCPENNReco::localPosition(DetParam const& theDetParam, ClusterPar
 	}
 
 
+        register_time(verystart, "2", durations, checkpoints) ;
 
     // Not all information is needed during inferance, but defined here anyway to align with training cluster preposcessing function
     float Cluster_raw[TXSIZE][TYSIZE];
@@ -484,9 +497,9 @@ LocalPoint PixelCPENNReco::localPosition(DetParam const& theDetParam, ClusterPar
     int Cluster_sizeX = std::numeric_limits<int>::max();
     int Cluster_sizeY = std::numeric_limits<int>::max();
     float Cluster_charge = 0.f; 
-    
+        register_time(verystart, "3", durations, checkpoints) ;
     int status = PixelPreprocess(*theClusterParam.theCluster, *theDetParam.theTopol,  Cluster_raw, Cluster_xRaw, Cluster_yRaw, Cluster, Cluster_x, Cluster_y, Cluster_charge, Cluster_size, Cluster_sizeX, Cluster_sizeY, ClusterCenter_x, ClusterCenter_y, Row_offset, Col_offset);
-
+        register_time(verystart, "4", durations, checkpoints) ;
     //if (status != 0) continue;
 
 
@@ -734,10 +747,10 @@ LocalPoint PixelCPENNReco::localPosition(DetParam const& theDetParam, ClusterPar
   
 
   //========================================================================================
-    std::cout<<theClusterParam.ierr  <<std::endl;
  //  printf("1D CLUSTER cota = %.2f, cotb = %.2f, graphPath_x = %s, inputTensorname = %s, outputTensorName = %s and %s, anglesTensorName = %s\n",theClusterParam.cotalpha,theClusterParam.cotbeta, graphPath_x.c_str(), inputTensorName_x.c_str(),outputTensorName_x.c_str(),outputTensorName_y.c_str(),anglesTensorName_x.c_str());    
     if(theClusterParam.ierr != 12345){ 
 		   // define a tensor and fill it with cluster projection
+        register_time(verystart, "5", durations, checkpoints) ;
     	tensorflow::Tensor cluster_flat_x(tensorflow::DT_FLOAT, {1,TXSIZE,1});
     	tensorflow::Tensor cluster_flat_y(tensorflow::DT_FLOAT, {1,TYSIZE,1});
 		  //tensorflow::Tensor cluster_(tensorflow::DT_FLOAT, {1,TXSIZE,TYSIZE,1});
@@ -749,7 +762,6 @@ LocalPoint PixelCPENNReco::localPosition(DetParam const& theDetParam, ClusterPar
     	angles.tensor<float,2>()(0, 1) = theClusterParam.cotbeta;
 	//ccharge.tensor<float,2>()(0, 0) = pixmax;
 	ccharge.tensor<float,2>()(0, 0) = Cluster_charge;
-    std::cout<<"TEST "<<std::endl;
 
     	for (int i = 0; i < TXSIZE; i++) 
     		//cluster_flat_x.tensor<float,3>()(0, i, 0) = clustMatrix_x[i];
@@ -764,17 +776,13 @@ LocalPoint PixelCPENNReco::localPosition(DetParam const& theDetParam, ClusterPar
 	 //cout<<"Running NN CPE inference"<<endl;
  	 std::vector<tensorflow::Tensor> output_x, output_y;   	
     		
-
-		auto start = std::chrono::high_resolution_clock::now(); 
+        register_time(verystart, "before_main", durations, checkpoints) ;
 
 		tensorflow::run(const_cast<tensorflow::Session *>(session_x), {{inputTensorName_x,cluster_flat_x}, {cchargeTensorName_x,ccharge}, {anglesTensorName_x,angles}}, {outputTensorName_x}, &output_x);
     		tensorflow::run(const_cast<tensorflow::Session *>(session_y), {{inputTensorName_y,cluster_flat_y}, {cchargeTensorName_y,ccharge}, {anglesTensorName_y,angles}}, {outputTensorName_y}, &output_y);
+        register_time(verystart, "after_main", durations, checkpoints) ;
     	
-		auto end = std::chrono::high_resolution_clock::now();
-		auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
-    		//std::cout << "Execution time: " << duration.count() << " microseconds" << std::endl;
-    	
 	theClusterParam.NNXrec_ = output_x[0].matrix<float>()(0,0);
     	//theClusterParam.NNXrec_ = theClusterParam.NNXrec_ + pixelsize_x*(mid_x); 
     	theClusterParam.NNXrec_ =  theClusterParam.NNXrec_ / output_scale + ClusterCenter_x; 
@@ -785,7 +793,6 @@ LocalPoint PixelCPENNReco::localPosition(DetParam const& theDetParam, ClusterPar
     	theClusterParam.NNYrec_ =  theClusterParam.NNYrec_ / output_scale + ClusterCenter_y;
     	theClusterParam.NNSigmaY_ = output_y[0].matrix<float>()(0,1)  / output_scale;
 		  //printf("x = %f, x_err = %f, y = %f, y_err = %f\n",theClusterParam.NNXrec_, theClusterParam.NNSigmaX_, theClusterParam.NNYrec_, theClusterParam.NNSigmaY_);
-    std::cout<<Cluster_charge<<" "<<ClusterCenter_y<<" "<<output_y[0].matrix<float>()(0,0)<<" "<<std::endl;
 
     	if(isnan(theClusterParam.NNXrec_) or theClusterParam.NNXrec_>=1300 or isnan(theClusterParam.NNYrec_) or theClusterParam.NNYrec_>=3150 ){
     		theClusterParam.ierr = 12345;
@@ -890,7 +897,12 @@ if(theClusterParam.ierr != 0) {
 		}
 		*/
 	}
-  return LocalPoint(theClusterParam.NNXrec_, theClusterParam.NNYrec_);
+        register_time(verystart, "full function", durations, checkpoints) ;
+	
+  for (int i = 0; i < int(checkpoints.size()); i++){
+        std::cout<<"NN Execution time at check point: " <<checkpoints.at(i)<<" : "<< durations.at(i)<<" nanoseconds"<<std::endl;
+    }
+    return LocalPoint(theClusterParam.NNXrec_, theClusterParam.NNYrec_);
 }
 
 //------------------------------------------------------------------
