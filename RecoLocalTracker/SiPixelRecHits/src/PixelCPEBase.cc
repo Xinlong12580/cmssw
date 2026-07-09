@@ -54,7 +54,8 @@ PixelCPEBase::PixelCPEBase(edm::ParameterSet const& conf,
   genErrorDBObject_ = genErrorDBObject;
 
   //-- Template Calibration Object from DB
-  if (theFlag_ != 0)
+  //if (theFlag_ != 0)
+  if (theFlag_ != 0 && theFlag_ != 59 )
     templateDBobject_ = templateDBobject;  // flag to check if it is generic or templates
 
   // Configurables
@@ -104,7 +105,8 @@ PixelCPEBase::PixelCPEBase(edm::ParameterSet const& conf,
   // For Templates only
   // Compute the Lorentz shifts for this detector element for templates (from Alignment)
   doLorentzFromAlignment_ = conf.getParameter<bool>("doLorentzFromAlignment");
-  useLAFromDB_ = conf.getParameter<bool>("useLAFromDB");
+  //useLAFromDB_ = conf.getParameter<bool>("useLAFromDB");
+  useLAFromDB_ = true;
 
   LogDebug("PixelCPEBase") << " LA constants - " << lAOffset_ << " " << lAWidthBPix_ << " " << lAWidthFPix_
                            << endl;  //dk
@@ -167,7 +169,7 @@ void PixelCPEBase::fillDetParams() {
     if (theFlag_ == 0) {         // for generic
       if (LoadTemplatesFromDB_)  // do only if genError requested
         p.detTemplateId = genErrorDBObject_->getGenErrorID(p.theDet->geographicalId().rawId());
-    } else {  // for templates
+    } else if(theFlag_ != 59) {  // for templates
       p.detTemplateId = templateDBobject_->getTemplateID(p.theDet->geographicalId());
     }
 
@@ -184,7 +186,8 @@ void PixelCPEBase::fillDetParams() {
     p.bx = Bfield.x();
 
     //---  Compute the Lorentz shifts for this detector element
-    if ((theFlag_ == 0) || useLAFromDB_ ||
+    //if ((theFlag_ == 0) || useLAFromDB_ ||
+    if (useLAFromDB_ ||
         doLorentzFromAlignment_) {  // do always for generic and if using LA from DB or alignment for templates
       p.driftDirection = driftDirection(p, Bfield);
       computeLorentzShifts(p);
