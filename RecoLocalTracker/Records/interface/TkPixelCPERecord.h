@@ -13,7 +13,8 @@
 #include "CalibTracker/Records/interface/SiPixel2DTemplateDBObjectESProducerRcd.h"
 
 #include "FWCore/Utilities/interface/mplVector.h"
-
+#include "PhysicsTools/TensorFlow/interface/TfGraphRecord.h"
+#include "PhysicsTools/TensorFlow//interface/TfGraphDefWrapper.h"
 class TkPixelCPERecord
     : public edm::eventsetup::DependentRecordImplementation<TkPixelCPERecord,
                                                             edm::mpl::Vector<TrackerDigiGeometryRecord,
@@ -22,6 +23,7 @@ class TkPixelCPERecord
                                                                              SiPixelGenErrorDBObjectRcd,
                                                                              SiPixelTemplateDBObjectESProducerRcd,
                                                                              SiPixel2DTemplateDBObjectESProducerRcd,
-                                                                             TrackerTopologyRcd> > {};
+                                                                             TrackerTopologyRcd,
+                                                                              TfGraphRecord> > {};
 
 #endif
